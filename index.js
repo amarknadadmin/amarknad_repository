@@ -4,8 +4,8 @@
 const express = require('express');
 const Datastore = require('nedb');
 require('dotenv').config();
-var secret_password = process.env.secret_password;
-console.log(secret_password);
+//var secret_password = process.env.secret_password;
+//console.log(secret_password);
 
 const app = express();
 const port = process.env.PORT || 3050;
