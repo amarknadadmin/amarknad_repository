@@ -2,43 +2,48 @@
 
 
 const express = require('express');
-const Datastore = require('nedb');
+const app = express();
 require('dotenv').config();
+const port = process.env.PORT || 3050;
+
+
+/***********************************************************************************************************************************
+const Datastore = require('nedb');
+const database = new Datastore('database.db');
+database.loadDatabase();
+**************************************************************************************************************************************/
+
 //var secret_password = process.env.secret_password;
 //console.log(secret_password);
 
-const app = express();
-const port = process.env.PORT || 3050;
 
 app.listen(port, () => console.log('listening at '+port));
-app.use(express.static('public_html'));
 app.use(express.static('server_site'));
 app.use(express.json({limit: '1mb'}));
 
 
-const database = new Datastore('database.db');
-database.loadDatabase();
 
 
-var holder ='';
 
+//var holder ='';
+
+
+
+//x_server_test: server set up to receive post-requests
+app.get('/api_x', (request, response) => {
+	response.json({comment: "hello world"});
+});
 
 
 /*********************************************************************************************************
-//x_server_test: server set up to receive post-requests
-app.get('/api_x', (request, response) => {
-	response.json({comment: "index.js is present"});
-});
 *********************************************************************************************************/
 
 
-
-
-
+/*********************************************************************************************************
 //A4: server set up to receive post-requests
 app.post('/api1', (request, response) => {
 	//console.log('api1 got a request');
-	console.log(request.body);
+	//console.log(request.body);
 	const data = request.body;
 	//const timestamp = Date.now();
 	//data.timestamp = timestamp;
@@ -84,7 +89,7 @@ app.post('/api3', (request, response) => {
 	console.log('api3 got a request');
 	response.json({status: 'success api3',returned_value: port});
 });
-/*********************************************************************************************************
+
 *********************************************************************************************************/
 
 
