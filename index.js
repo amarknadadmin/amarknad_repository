@@ -73,7 +73,7 @@ app.get('/api', (request, response) => {
 
 app.get('/cron', (request, response) => {
 
-	¨const data = {
+	const data = {
 		"test": "cron"
 	}
 	//run every 24 hours 
