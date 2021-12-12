@@ -77,7 +77,7 @@ app.get('/cron', (request, response) => {
 		"test": "cron"
 	}
 	//run every 24 hours 
-	setInterval((){
+	setInterval(() =>{
 		database.insert(data);
 
 	}, 1000 * 60 * 60 * 24);
