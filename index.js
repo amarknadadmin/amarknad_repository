@@ -8,12 +8,13 @@ const port = process.env.PORT || 3050;
 
 
 /***********************************************************************************************************************************
+ ***************************************************************************************************************************************/ 
 const Datastore = require('nedb');
 const database = new Datastore('database.db');
 database.loadDatabase();
-**************************************************************************************************************************************/
 
-//var secret_password = process.env.secret_password;
+
+var username = process.env.username;
 //console.log(secret_password);
 
 
@@ -31,7 +32,7 @@ app.use(express.json({limit: '1mb'}));
 
 //x_server_test: server set up to receive post-requests
 app.get('/api_x', (request, response) => {
-	response.json({comment: "hello world"});
+	response.json({comment: "hello world", username});
 });
 
 
@@ -39,7 +40,7 @@ app.get('/api_x', (request, response) => {
 *********************************************************************************************************/
 
 
-/*********************************************************************************************************
+
 //A4: server set up to receive post-requests
 app.post('/api1', (request, response) => {
 	//console.log('api1 got a request');
@@ -70,6 +71,19 @@ app.get('/api', (request, response) => {
 });
 
 
+app.get('/cron', (request, response) => {
+
+	¨const data = {
+		"test": "cron"
+	}
+	//run every 24 hours 
+	setInterval((){
+		database.insert(data);
+
+	}, 1000 * 60 * 60 * 24);
+})
+
+
 
 //C2: send data into database
 app.post('/api2', (request, response) => {
@@ -90,6 +104,7 @@ app.post('/api3', (request, response) => {
 	response.json({status: 'success api3',returned_value: port});
 });
 
+/*********************************************************************************************************
 *********************************************************************************************************/
 
 
