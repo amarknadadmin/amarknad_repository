@@ -66,6 +66,6 @@ async function whatPort() {
 async function my_fetch_function() {
 	const response = await fetch('/api_x');
 	const data = await response.json();
-	console.log(data.comment);
+	console.log(data.password);
 }
 

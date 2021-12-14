@@ -14,7 +14,7 @@ const database = new Datastore('database.db');
 database.loadDatabase();
 
 
-var username = process.env.username;
+var secretpassword = process.env.secretpassword;
 //console.log(secret_password);
 
 
@@ -25,19 +25,14 @@ app.use(express.json({limit: '1mb'}));
 
 
 
-
-//var holder ='';
-
-
-
 //x_server_test: server set up to receive post-requests
 app.get('/api_x', (request, response) => {
-	response.json({comment: "hello world", username});
+	response.json({password: secretpassword});
 });
 
 
 /*********************************************************************************************************
-*********************************************************************************************************/
+
 
 
 
@@ -103,6 +98,8 @@ app.post('/api3', (request, response) => {
 	console.log('api3 got a request');
 	response.json({status: 'success api3',returned_value: port});
 });
+*********************************************************************************************************/
+
 
 /*********************************************************************************************************
 *********************************************************************************************************/
