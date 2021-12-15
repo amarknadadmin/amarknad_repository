@@ -49,6 +49,7 @@ async function min5_fetch_function(aaa) {
 }
 
 
+
 // database printout
 async function db_printout_fetch_function() {
 	const response = await fetch('/api_db_printout');
