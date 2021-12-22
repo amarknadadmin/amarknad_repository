@@ -1,17 +1,35 @@
 //Run http://localhost:3050/
 
 
-const express = require('express');
+//const express = require('express');
+import express from 'express';
 const app = express();
-require('dotenv').config();
+
+//const Datastore = require('nedb');
+import Datastore from 'nedb';
+
+//const fetch = require('node-fetch');
+import fetch from 'node-fetch';
+
+
+
+//require('dotenv').config();
+import dotenv from 'dotenv'
+dotenv.config()
 const port = process.env.PORT || 3050;
 
 
 /***********************************************************************************************************************************
  ***************************************************************************************************************************************/ 
-const Datastore = require('nedb');
+
 const database = new Datastore('database.db');
+database.time_db = new Datastore('time_db.db');
 database.loadDatabase();
+database.time_db.loadDatabase();
+
+//database.time_db.find({}, function (err,output){if(err){console.log(err);}console.log(output[0].time);});
+//database.time_db.remove({ _id: '7Ew2xstqYWVHd0Hz' }, {}, function (err, numRemoved) {});
+
 
 
 var secretpassword = process.env.secretpassword;
@@ -26,80 +44,6 @@ app.use(express.json({limit: '1mb'}));
 
 
 
-
-
-
-
-
-
-
-/*********************************************************************************************************
-
-//A4: server set up to receive post-requests
-app.post('/api1', (request, response) => {
-	//console.log('api1 got a request');
-	//console.log(request.body);
-	const data = request.body;
-	//const timestamp = Date.now();
-	//data.timestamp = timestamp;
-	//database.insert(data);
-	if (data.password=='thisisatestpassword')
-		{holder = 'success api1';}
-	else
-		{holder = 'failure api1';}
-	response.json({status: holder});
-});
-
-
-//B2: server set up to receive get-requests
-app.get('/api', (request, response) => {
-	database.find({}, (err,data) => {
-		if (err) {
-			response.end();
-			return;
-		}
-		response.json(data);
-	});
-	
-	//response.json({test: 123});
-});
-
-
-app.get('/cron', (request, response) => {
-
-	const data = {
-		"test": "cron"
-	}
-	//run every 24 hours 
-	setInterval(() =>{
-		database.insert(data);
-
-	}, 1000 * 60 * 60 * 24);
-})
-
-
-
-//C2: send data into database
-app.post('/api2', (request, response) => {
-	console.log('api2 got a request');
-	console.log(request.body);
-	const data = request.body;
-	const timestamp = Date.now();
-	data.timestamp = timestamp;
-	database.insert(data);
-	response.json({status: 'success api2'});
-});
-
-
-
-//D2: set up server to report port-number
-app.post('/api3', (request, response) => {
-	console.log('api3 got a request');
-	response.json({status: 'success api3',returned_value: port});
-});
-*********************************************************************************************************/
-
-
 /*********************************************************************************************************
 *********************************************************************************************************/
 
@@ -108,11 +52,11 @@ app.post('/api3', (request, response) => {
 //CHECK THE LATEST TIME PERIOD
 //https://www.statistikdatabasen.scb.se/pxweb/sv/ssd/START__AM__AM0401__AM0401A/NAKUBefolkning2M/
 
-/***********************************************************************************************************************************
 
 
 
-var timecheck_url = "http://api.scb.se/OV0104/v1/doris/sv/ssd/START/AM/AM0401/AM0401A/NAKUBefolkning2M"
+
+var timecheck_url = "http://api.scb.se/OV0104/v1/doris/sv/ssd/START/AM/AM0401/AM0401A/NAKUBefolkning2M";
 
 
 var timecheck_body = {
@@ -166,7 +110,7 @@ var timecheck_body = {
   "response": {
     "format": "json"
   }
-}
+};
 
 
 //Kon Man="1" Kvinnor="2" Totalt="1+2"
@@ -184,35 +128,116 @@ var timecheck_body = {
 
 //Tid ex: "2021M08"
 //console.log("Tid")
-//timecheck_body.query[4].selection.values = ["2021M09"]
+timecheck_body.query[4].selection.values = ["2021M01"];
 
 
 var timecheck_options = {
       method: "POST",
-      body: JSON.stringify(timecheck_body),
+      body: JSON.stringify(timecheck_body)
     };
 
 
-async function timecheck_func() {
-  console.log("step 1");
+
+
+async function sample_time_value(bbb) {
+  timecheck_body.query[4].selection.values = [bbb];
+  timecheck_options = {method: "POST",body: JSON.stringify(timecheck_body)};
   const response = await fetch(timecheck_url, timecheck_options);
-  console.log("step 2");
-  console.log(response);
   const scbdata = await response.json();
-  console.log("step 3");
-  console.log(scbdata);
+  
+  var control=0;
+  if (!response.ok) {
+    control = 6;
+  }
+  if (response.ok) {
+    control = 5;
+  }
+  return control;
+}
+
+async function timeexist(aaa) {
+	var timeexist_output=0;
+	await sample_time_value(aaa).then(data => {timeexist_output=1}).catch(reason => {timeexist_output=2});
+	return timeexist_output;
+
+}
+
+async function latesttime() {
+	var previous_time= await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
+	var previous_y = previous_time.substring(0,4);
+	var previous_m = previous_time.substring(5,7);
+	var check_m = String(parseInt(previous_m,10) +1);
+	var check_y = previous_y;
+	if (check_m=="13") {
+		check_m="01";
+		check_y=String(parseInt(previous_y,10) +1);
+	}
+	if (check_m.length==1) {
+		check_m="0"+check_m;
+	}
+	var check_time = check_y+"M"+check_m;
+	var output_time = previous_time;
+	if ((await timeexist(check_time))==1) {output_time=check_time;}
+	
+	await database.time_db.remove({}, { multi: true }, function (err, numRemoved) {});
+	database.time_db.persistence.compactDatafile();
+
+	var timedata = {time: output_time};
+	var timestamp = Date();
+	timedata.timestamp = timestamp;
+
+	database.time_db.insert(timedata);
+}
+
+var periodlist = '';
+async function list_10_years() {
+	var add_product = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
+	periodlist = "["+ add_product;
+	var add_build ='';
+	var add_build_y ='';
+	var add_build_m ='';
+	for (var i = 0; i < (11); i++) {
+		add_build_y = parseInt(add_product.substring(0,4),10);
+		add_build_m = parseInt(add_product.substring(5,7),10);
+		if (add_build_m==1) {add_build_y=add_build_y-1; add_build_m=12;} else {add_build_m=add_build_m-1;}
+		add_build_y = String(add_build_y);
+		if (String(add_build_m).length==1) {add_build_m = "0"+String(add_build_m);} else {add_build_m = String(add_build_m);}
+		add_product = add_build_y+"M"+add_build_m;
+		periodlist = periodlist+","+add_product;
+	}
+	periodlist = periodlist+"]";
 }
 
 
 
- ***************************************************************************************************************************************/ 
 
+/***********************************************************************************************************************************
+ ***************************************************************************************************************************************/ 
+//{"time":"2021M02","timestamp":"Mon Dec 20 2021 23:12:05 GMT+0100 (centraleuropeisk normaltid)","_id":"ZaaX3xhm2SGx9BBs"}
 
 //x_server_test: server set up to receive get-requests
-app.get('/api_x', (request, response) => {
-	timecheck_func();
+app.get('/api_x', async (request, response) => {
+	
+	//timeexist("2021M10");
+	//latesttime();
 
-	response.json({reply: "well done"});
+	//var return_value = '';
+	//await database.time_db.find({}, function (err, output){return_value = output[0].time;console.log("message inside: "+return_value);});
+	//await console.log("message outside: "+return_value);
+
+	//var x = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
+	//console.log(x);
+
+	await list_10_years();
+	console.log(periodlist);
+	response.json({reply: "x1 executed"});
+});
+
+app.get('/api_x2', async (request, response) => {
+	//await database.time_db.remove({}, { multi: true }, function (err, numRemoved) {});
+	//database.time_db.persistence.compactDatafile;
+	var logged_time = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
+	response.json({reply: "x2 executed", result: logged_time});
 });
 
 
@@ -229,11 +254,13 @@ app.post('/api_y', (request, response) => {
 var run5min = 1;
 
 function enter5minutes() {
-	data = {name: "test"};
+	console.log("tick tock");
+	//data = {name: "test"};
 	setInterval(() =>{
-		data.time = Date();
+		//data.time = Date();
 		if (run5min==1) {
-			database.insert(data);
+			latesttime();
+			console.log("update again");
 			//console.log(Date());
 		}
 	}, 1000 * 60 * 5 * 1);
@@ -241,7 +268,7 @@ function enter5minutes() {
 
 app.post('/api_5minutes', (request, response) => {
 	if (request.body.password==secretpassword) {enter5minutes();}
-	response.json({reply: "well done"});
+	response.json({reply: "5 minutes executed"});
 });
 
 

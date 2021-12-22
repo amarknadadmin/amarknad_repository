@@ -23,6 +23,12 @@ async function x_fetch_function() {
 	console.log(data.reply);
 }
 
+async function x2_fetch_function() {
+	const response = await fetch('/api_x2');
+	const data = await response.json();
+	console.log(data);
+}
+
 
 // y code
 async function y_fetch_function(aaa) {
