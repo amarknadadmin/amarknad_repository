@@ -56,93 +56,60 @@ app.use(express.json({limit: '1mb'}));
 
 
 
-var timecheck_url = "http://api.scb.se/OV0104/v1/doris/sv/ssd/START/AM/AM0401/AM0401A/NAKUBefolkning2M";
+var dload1_basic_url = "http://api.scb.se/OV0104/v1/doris/sv/ssd/START/AM/AM0401/AM0401A/NAKUBefolkning2M";
 
 
-var timecheck_body = {
+var dload1_basic_body = {
   "query": [
-    {
-      "code": "Kon",
-      "selection": {
-        "filter": "item",
-        "values": [
-          "1"
-        ]
-      }
-    },
-    {
-      "code": "Alder",
-      "selection": {
-        "filter": "item",
-        "values": [
-          "tot16-64"
-        ]
-      }
-    },
-    {
-      "code": "Arbetskraftstillh",
-      "selection": {
-        "filter": "item",
-        "values": [
-          "SYS"
-        ]
-      }
-    },
-    {
-      "code": "ContentsCode",
-      "selection": {
-        "filter": "item",
-        "values": [
-          "000001CA"
-        ]
-      }
-    },
-    {
-      "code": "Tid",
-      "selection": {
-        "filter": "item",
-        "values": [
-          "2021M01"
-        ]
-      }
-    }
+    {"code": "Kon","selection": {"filter": "item","values": ["1"]}},
+    {"code": "Alder","selection": {"filter": "item","values": ["tot15-74"]}},
+    {"code": "Arbetskraftstillh","selection": {"filter": "item","values": ["SYS","ALÖS"]}},
+    {"code": "ContentsCode","selection": {"filter": "item","values": ["000001CA"]}},
+    {"code": "Tid","selection": {"filter": "item","values": ["2021M01"]}}
   ],
-  "response": {
-    "format": "json"
-  }
+  "response": {"format": "json"}
 };
-
-
 //Kon Man="1" Kvinnor="2" Totalt="1+2"
-//console.log("kön")
-//timecheck_body.query[0].selection.values[0]="1+2"
-
-
+//dload1_basic_body.query[0].selection.values[0]="1+2"
 //Alder "15-19", "20-24","15-24","25-34","35-44","45-54","55-64","65-74","tot15-74","tot16-64"
-//console.log("Ålder")
-//timecheck_body.query[1].selection.values[0]="tot15-74"
-
+//dload1_basic_body.query[1].selection.values[0]="tot15-74"
 //Tillhorighet "SYS","ALÖS","EIAKR","IAKR","TOTB"
-//console.log("Tillhörighet")
-//timecheck_body.query[2].selection.values[0]="ALÖS"
-
+//dload1_basic_body.query[2].selection.values[0]="ALÖS"
 //Tid ex: "2021M08"
-//console.log("Tid")
-timecheck_body.query[4].selection.values = ["2021M01"];
+//dload1_basic_body.query[4].selection.values = ["2021M01"];
+var dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
 
 
-var timecheck_options = {
-      method: "POST",
-      body: JSON.stringify(timecheck_body)
-    };
-
-
+var dload2_usegments_url = "http://api.scb.se/OV0104/v1/doris/sv/ssd/START/AM/AM0401/AM0401R/NAKUArblosaTInrUtrM";
+var dload2_usegments_body = {
+  "query": [
+    {"code": "Arbetsloshetstid","selection": {"filter": "item","values": ["TOT"]}},
+    {"code": "InrikesUtrikes","selection": {"filter": "item","values": ["83"]}},
+    {"code": "Kon","selection": {"filter": "item","values": ["1+2"]}},
+    {"code": "Alder","selection": {"filter": "item","values": ["tot15-74"]}},
+    {"code": "ContentsCode","selection": {"filter": "item","values": ["AM0401RF"]}},
+    {"code": "Tid","selection": {"filter": "item","values": ["2021M11"]}}
+  ],
+  "response": {"format": "json"}
+};
+//Arbetslöshet tid "TOT","27V-"
+//dload2_usegments_body.query[0].selection.values = ["TOT"];
+//Inrikes utrikes född "13","23","83" (Inrikes = 13) (Utrikes =23) (totalt = 83)
+//dload2_usegments_body.query[1].selection.values = ["83"];
+//Kön "1","2","1+2" (Män = 1)
+//dload2_usegments_body.query[2].selection.values = ["1+2"];
+//Ålder "15-24","25-54","55-74","tot15-74","tot16-64"
+//dload2_usegments_body.query[3].selection.values = ["tot15-74"];
+//Tid "2021M10","2021M11"
+//dload2_usegments_body.query[5].selection.values = ["2021M11"];
+var dload2_usegments_options = {method: "POST",body: JSON.stringify(dload2_usegments_body)};
 
 
 async function sample_time_value(bbb) {
-  timecheck_body.query[4].selection.values = [bbb];
-  timecheck_options = {method: "POST",body: JSON.stringify(timecheck_body)};
-  const response = await fetch(timecheck_url, timecheck_options);
+	//bbb is the period we are checking
+  dload1_basic_body.query[4].selection.values = [bbb]; //make sure sample loaded from correct period
+  dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
+  const response = await fetch(dload1_basic_url, dload1_basic_options);
   const scbdata = await response.json();
   
   var control=0;
@@ -156,7 +123,8 @@ async function sample_time_value(bbb) {
 }
 
 async function timeexist(aaa) {
-	var timeexist_output=0;
+	//aaa is the period we are checking
+	var timeexist_output=0; //timeexist_output signals if sample could be retrieved
 	await sample_time_value(aaa).then(data => {timeexist_output=1}).catch(reason => {timeexist_output=2});
 	return timeexist_output;
 
@@ -219,7 +187,7 @@ async function list_10_years() {
 app.get('/api_x', async (request, response) => {
 	
 	//timeexist("2021M10");
-	//latesttime();
+	latesttime();
 
 	//var return_value = '';
 	//await database.time_db.find({}, function (err, output){return_value = output[0].time;console.log("message inside: "+return_value);});
@@ -228,8 +196,8 @@ app.get('/api_x', async (request, response) => {
 	//var x = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
 	//console.log(x);
 
-	await list_10_years();
-	console.log(periodlist);
+	//await list_10_years();
+	//console.log(periodlist);
 	response.json({reply: "x1 executed"});
 });
 
