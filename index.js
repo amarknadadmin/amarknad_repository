@@ -24,11 +24,12 @@ const port = process.env.PORT || 3050;
 
 const database = new Datastore('database.db');
 database.time_db = new Datastore('time_db.db');
+database.history_db = new Datastore('history_db.db');
+database.stats_db = new Datastore('stats_db.db');
 database.loadDatabase();
 database.time_db.loadDatabase();
-
-//database.time_db.find({}, function (err,output){if(err){console.log(err);}console.log(output[0].time);});
-//database.time_db.remove({ _id: '7Ew2xstqYWVHd0Hz' }, {}, function (err, numRemoved) {});
+database.history_db.loadDatabase();
+database.stats_db.loadDatabase();
 
 
 
@@ -40,7 +41,20 @@ app.use(express.static('server_site'));
 app.use(express.json({limit: '1mb'}));
 
 
-
+const monthNumberToLabelMap = {
+  [1]: 'Jan',
+  [2]: 'Feb',
+  [3]: 'Mar',
+  [4]: 'Apr',
+  [5]: 'May',
+  [6]: 'Jun',
+  [7]: 'Jul',
+  [8]: 'Aug',
+  [9]: 'Sep',
+  [10]: 'Okt',
+  [11]: 'Nov',
+  [12]: 'Dec',
+}
 
 
 
@@ -105,32 +119,33 @@ var dload2_usegments_body = {
 var dload2_usegments_options = {method: "POST",body: JSON.stringify(dload2_usegments_body)};
 
 
-async function sample_time_value(bbb) {
+async function sample_dload1_basic(bbb) { //this function loads a sample of data
 	//bbb is the period we are checking
   dload1_basic_body.query[4].selection.values = [bbb]; //make sure sample loaded from correct period
   dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
   const response = await fetch(dload1_basic_url, dload1_basic_options);
   const scbdata = await response.json();
-  
-  var control=0;
-  if (!response.ok) {
-    control = 6;
-  }
-  if (response.ok) {
-    control = 5;
-  }
-  return control;
 }
 
-async function timeexist(aaa) {
+async function sample_dload2_usegments(bbb) { //this function loads a sample of data
+	//bbb is the period we are checking
+  dload2_usegments_body.query[5].selection.values = [bbb]; //make sure sample loaded from correct period
+  dload2_usegments_options = {method: "POST",body: JSON.stringify(dload2_usegments_body)};
+  const response = await fetch(dload1_basic_url, dload1_basic_options);
+  const scbdata = await response.json();
+}
+
+async function timeexist(aaa) { //this function checks of samples returns value or error message
 	//aaa is the period we are checking
-	var timeexist_output=0; //timeexist_output signals if sample could be retrieved
-	await sample_time_value(aaa).then(data => {timeexist_output=1}).catch(reason => {timeexist_output=2});
-	return timeexist_output;
+	var timeexist_1=0; //timeexist_1 signals if sample could be retrieved for dload 1
+	var timeexist_2=0; 
+	await sample_dload1_basic(aaa).then(data => {timeexist_1=1}).catch(reason => {timeexist_1=2});
+	await sample_dload2_usegments(aaa).then(data => {timeexist_2=1}).catch(reason => {timeexist_2=2});
+	return Math.min(timeexist_1,timeexist_2);
 
 }
 
-async function latesttime() {
+async function latesttime_update() { //this function updates time strings in database files
 	var previous_time= await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
 	var previous_y = previous_time.substring(0,4);
 	var previous_m = previous_time.substring(5,7);
@@ -145,7 +160,8 @@ async function latesttime() {
 	}
 	var check_time = check_y+"M"+check_m;
 	var output_time = previous_time;
-	if ((await timeexist(check_time))==1) {output_time=check_time;}
+	var new_histories = 0;
+	if ((await timeexist(check_time))==1) {output_time=check_time; new_histories=1;}
 	
 	await database.time_db.remove({}, { multi: true }, function (err, numRemoved) {});
 	database.time_db.persistence.compactDatafile();
@@ -155,28 +171,185 @@ async function latesttime() {
 	timedata.timestamp = timestamp;
 
 	database.time_db.insert(timedata);
+
+	if (new_histories==1) {
+	await database.history_db.remove({}, { multi: true }, function (err, numRemoved) {});
+	database.history_db.persistence.compactDatafile();
+	console.log("deleted histories from database");
+	await create_list_periods(12);
+	const p1y = periodlist;
+	database.history_db.insert({history: "p1y", periods: p1y});
+	console.log("created p1y");
+	await create_list_periods(60);
+	const p5y = periodlist;
+	database.history_db.insert({history: "p5y", periods: p5y});
+	console.log("created p5y");
+	await create_list_periods(120);
+	const p10y = periodlist;
+	database.history_db.insert({history: "p10y", periods: p10y});
+	console.log("created p10y");
+	await create_list_periods(72);
+	const p5ylag = periodlist.slice(0, 600)+"]";
+	database.history_db.insert({history: "p5ylag", periods: p5ylag});
+	console.log("created p5ylag");
+	//const historylist = {p1y:p1y,p5y:p5y,p10y:p10y,p5ylag:p5ylag};
+	//database.history_db.insert(historylist);
+	//console.log("inserted histories to database");
+	new_histories=0;
+	}
+
+
 }
 
 var periodlist = '';
-async function list_10_years() {
-	var add_product = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
-	periodlist = "["+ add_product;
+async function create_list_periods(per_num) { //this function creates a string of periods based on what the latest period is
+	var loaded_time = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
+	var yback = Math.floor(parseInt(per_num-1)/12); //1
+	var mback = parseInt(per_num-1)-(yback*12); //11
+	var monthhold = parseInt(loaded_time.substring(5,7),10)-mback;
+	if (monthhold<1) {monthhold=monthhold+12; yback=yback+1;}
+	monthhold = String(monthhold);
+	monthhold = "0" + monthhold;
+	monthhold = monthhold.substring(monthhold.length-2);
+
+	var add_product = String(parseInt(loaded_time.substring(0,4),10)-yback)+"M"+monthhold;
+	var add_string = "\"" + add_product + "\"";
+	periodlist = "["+ add_string;
 	var add_build ='';
 	var add_build_y ='';
 	var add_build_m ='';
-	for (var i = 0; i < (11); i++) {
+	for (var i = 0; i < (per_num-1); i++) {
 		add_build_y = parseInt(add_product.substring(0,4),10);
 		add_build_m = parseInt(add_product.substring(5,7),10);
-		if (add_build_m==1) {add_build_y=add_build_y-1; add_build_m=12;} else {add_build_m=add_build_m-1;}
+		if (add_build_m==12) {add_build_y=add_build_y+1; add_build_m=1;} else {add_build_m=add_build_m+1;}
 		add_build_y = String(add_build_y);
 		if (String(add_build_m).length==1) {add_build_m = "0"+String(add_build_m);} else {add_build_m = String(add_build_m);}
 		add_product = add_build_y+"M"+add_build_m;
-		periodlist = periodlist+","+add_product;
+		add_string = "\"" + add_product + "\""
+		periodlist = periodlist+","+add_string;
 	}
 	periodlist = periodlist+"]";
 }
 
 
+async function stats_update() {
+	
+	
+	var p10y_list = await new Promise( (resolve,reject) => {database.history_db.find({history: 'p10y'}, function (err, output) {resolve(output[0].periods);});});
+	var p5y_list = await new Promise( (resolve,reject) => {database.history_db.find({history: 'p5y'}, function (err, output) {resolve(output[0].periods);});});
+	var entries_periods = JSON.parse(p10y_list); //an object version of period list
+	
+	var response = [];
+	var scbdata = [];
+	const data_array = [];
+	var data = '';
+	//insert periods
+	for (var i = 0; i < 120; i++) {data = {period: entries_periods[i]}; data_array[i] = data;}
+
+	//download 1: basic unemployment data
+	var dload1_cats = ["SYS","ALÖS","EIAKR","IAKR","TOTB"];
+	dload1_basic_body.query[4].selection.values = entries_periods;
+	dload1_basic_body.query[0].selection.values[0]="1+2";
+	dload1_basic_body.query[1].selection.values[0]="tot15-74";
+	
+	//insert SYS
+	dload1_basic_body.query[2].selection.values=["SYS"];
+	dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
+	response = await fetch(dload1_basic_url, dload1_basic_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].SYS = scbdata.data[i].values[0];}
+	
+	//insert ALÖS
+	dload1_basic_body.query[2].selection.values=["ALÖS"];
+	dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
+	response = await fetch(dload1_basic_url, dload1_basic_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].ALOS = scbdata.data[i].values[0];}
+
+	//insert EIAKR
+	dload1_basic_body.query[2].selection.values=["EIAKR"];
+	dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
+	response = await fetch(dload1_basic_url, dload1_basic_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].EIAKR = scbdata.data[i].values[0];}
+
+	//insert IAKR
+	dload1_basic_body.query[2].selection.values=["IAKR"];
+	dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
+	response = await fetch(dload1_basic_url, dload1_basic_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].IAKR = scbdata.data[i].values[0];}
+	
+	//insert TOTB
+	dload1_basic_body.query[2].selection.values=["TOTB"];
+	dload1_basic_options = {method: "POST",body: JSON.stringify(dload1_basic_body)};
+	response = await fetch(dload1_basic_url, dload1_basic_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].TOTB = scbdata.data[i].values[0];}
+
+	//calculation arbetslöshet
+	for (var i = 0; i < 120; i++) {data_array[i].aloshet = Math.round(10000*data_array[i].ALOS/data_array[i].IAKR)/100;}
+
+	//download 2: unemployments segments: inrikes/utrikes, ålder, långtids
+	dload2_usegments_body.query[5].selection.values = entries_periods;
+	dload2_usegments_body.query[0].selection.values = ["TOT"]; //längd "TOT","27V-"
+	dload2_usegments_body.query[1].selection.values = ["83"]; //inr utr "13","23","83"
+	dload2_usegments_body.query[2].selection.values = ["1+2"];
+	dload2_usegments_body.query[3].selection.values = ["tot15-74"]; // ålder "15-24","25-54","55-74","tot15-74","tot16-64"
+
+	//insert v27
+	dload2_usegments_body.query[0].selection.values = ["27V-"];
+	dload2_usegments_options = {method: "POST",body: JSON.stringify(dload2_usegments_body)};
+	response = await fetch(dload2_usegments_url, dload2_usegments_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].v27 = scbdata.data[i].values[0];}
+	dload2_usegments_body.query[0].selection.values = ["TOT"];
+	
+	//insert utrikes
+	dload2_usegments_body.query[1].selection.values = ["23"];
+	dload2_usegments_options = {method: "POST",body: JSON.stringify(dload2_usegments_body)};
+	response = await fetch(dload2_usegments_url, dload2_usegments_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].utrikes = scbdata.data[i].values[0];}
+	dload2_usegments_body.query[1].selection.values = ["83"];
+	
+	//insert ungdom 15-24
+	dload2_usegments_body.query[3].selection.values = ["15-24"];
+	dload2_usegments_options = {method: "POST",body: JSON.stringify(dload2_usegments_body)};
+	response = await fetch(dload2_usegments_url, dload2_usegments_options);
+	scbdata = await response.json();
+	for (var i = 0; i < 120; i++) {data_array[i].ungdom = scbdata.data[i].values[0];}
+	dload2_usegments_body.query[3].selection.values = ["tot15-74"];
+
+	//console.log(scbdata);
+	//console.log(data_array);
+
+	await database.stats_db.remove({}, { multi: true }, function (err, numRemoved) {});
+	database.stats_db.persistence.compactDatafile();
+	console.log(data_array[0].period);
+	//database.stats_db.insert({data_array[0]});
+	for (var i = 0; i < 120; i++) {
+		database.stats
+			database.stats_db.insert({
+			
+			
+			period: data_array[i].period,
+			month: monthNumberToLabelMap[parseInt(data_array[i].period.substring(5,7))],
+			SYS: data_array[i].SYS,
+			ALOS: data_array[i].ALOS,
+			EIAKR: data_array[i].EIAKR,
+			IAKR: data_array[i].IAKR,
+			TOTB: data_array[i].TOTB,
+			aloshet: data_array[i].aloshet,
+			v27: data_array[i].v27,
+			utrikes: data_array[i].utrikes,
+			ungdom: data_array[i].ungdom
+			
+		});
+	}
+	console.log("updated stats database");
+}
+//stats_update();
 
 
 /***********************************************************************************************************************************
@@ -185,28 +358,27 @@ async function list_10_years() {
 
 //x_server_test: server set up to receive get-requests
 app.get('/api_x', async (request, response) => {
-	
-	//timeexist("2021M10");
-	latesttime();
+	latesttime_update();
 
 	//var return_value = '';
 	//await database.time_db.find({}, function (err, output){return_value = output[0].time;console.log("message inside: "+return_value);});
 	//await console.log("message outside: "+return_value);
 
-	//var x = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
-	//console.log(x);
-
-	//await list_10_years();
-	//console.log(periodlist);
+	
 	response.json({reply: "x1 executed"});
 });
 
 app.get('/api_x2', async (request, response) => {
-	//await database.time_db.remove({}, { multi: true }, function (err, numRemoved) {});
-	//database.time_db.persistence.compactDatafile;
-	var logged_time = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
-	response.json({reply: "x2 executed", result: logged_time});
+	//var logged_time = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
+
+	response.json({reply: "x2 executed", result: 123});
 });
+
+app.get('/api_x3', async (request, response) => {
+	var logged_time = await new Promise( (resolve,reject) => {database.history_db.find({ }, function (err, output) {resolve(output[0].time);});});
+	response.json({reply: "x3 executed", result: logged_time});
+});
+
 
 
 //y_server_test: server set up to receive post-requests
@@ -218,6 +390,18 @@ app.post('/api_y', (request, response) => {
 	response.json({reply: reply, received: income, required: secretpassword, count: count});
 });
 
+//supply stats to amarknad.se
+app.post('/api_supply', async (request, response) => {
+	var reply = '';
+	var income = request.body.password;
+	if (request.body.password==secretpassword) {
+		var supply_data = await new Promise( (resolve,reject) => {database.stats_db.find({ }, function (err, output) {resolve(output);});});
+		response.json({supply_data});	
+	} 
+		else {response.json({result: "failure"});}
+});
+
+
 
 var run5min = 1;
 
@@ -227,7 +411,7 @@ function enter5minutes() {
 	setInterval(() =>{
 		//data.time = Date();
 		if (run5min==1) {
-			latesttime();
+			latesttime_update();
 			console.log("update again");
 			//console.log(Date());
 		}
