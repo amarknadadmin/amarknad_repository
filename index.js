@@ -385,9 +385,15 @@ app.post('/api_y', (request, response) => {
 // provide data
 
 
+// supply history to amarknad.se
+app.get('/api_supply_history', async (request, response) => {
+	var supply_history = await new Promise( (resolve,reject) => {database.history_db.find({history: 'p10y'}, function (err, output) {resolve(output[0].periods);});});
+	response.json({supply_history});	
+});
+
 
 //supply stats to amarknad.se
-app.get('/api_supply', async (request, response) => {
+app.get('/api_supply_stats', async (request, response) => {
 	var supply_data = await new Promise( (resolve,reject) => {database.stats_db.find({ }, function (err, output) {resolve(output);});});
 	response.json({supply_data});	
 });

@@ -26,9 +26,16 @@ async function y_fetch_function(aaa) {
 // provide data
 
 
+// supply history to amarknad.se
+async function supply_history() {
+	const response = await fetch('/api_supply_history');
+	const data = await response.json();
+	console.log(data);
+}
+
 // supply stats to amarknad.se
-async function supply_function() {
-	const response = await fetch('/api_supply');
+async function supply_stats() {
+	const response = await fetch('/api_supply_stats');
 	const data = await response.json();
 	console.log(data);
 }
