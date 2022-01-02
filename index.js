@@ -362,12 +362,6 @@ async function stats_update() {
 
 //x_server_test: server set up to receive get-requests
 app.get('/api_x', async (request, response) => {
-	//latesttime_update();
-
-	//var return_value = '';
-	//await database.time_db.find({}, function (err, output){return_value = output[0].time;console.log("message inside: "+return_value);});
-	//await console.log("message outside: "+return_value);
-
 	
 	response.json({reply: "x1 executed, api works", testvalue: 123});
 });
@@ -384,26 +378,21 @@ app.post('/api_y', (request, response) => {
 });
 
 
-
-
-
-
-
+//***********************************************************************************************************************
+// provide data
 
 
 
 //supply stats to amarknad.se
-app.post('/api_supply', async (request, response) => {
-	var reply = '';
-	var income = request.body.password;
-	if (request.body.password==secretpassword) {
-		var supply_data = await new Promise( (resolve,reject) => {database.stats_db.find({ }, function (err, output) {resolve(output);});});
-		response.json({supply_data});	
-	} 
-		else {response.json({result: "failure"});}
+app.get('/api_supply', async (request, response) => {
+	var supply_data = await new Promise( (resolve,reject) => {database.stats_db.find({ }, function (err, output) {resolve(output);});});
+	response.json({supply_data});	
 });
 
 
+
+//***********************************************************************************************************************
+// Automatic updates management
 
 var run5min = 1;
 
@@ -426,21 +415,54 @@ app.post('/api_5minutes', (request, response) => {
 });
 
 
-//database printout
-app.get('/api_db_printout', (request, response) => {
-	database.find({}, (err,data) => {
-		if (err) {
-			response.end();
-			return;
-		}
-		response.json(data);
-	});
-});
-
-
 //stop running enter5minutes
 app.get('/api_5min_block', (request, response) => {
 	run5min = 0;
 	response.json({reply: "blocked"});
 });
 
+
+//***********************************************************************************************************************
+// Control databases
+
+
+//latest time
+app.post('/printout_time', async (request, response) => {
+	var db_data = "access denied";
+	var control = '';
+	var income = request.body.password;
+	var count = 0;
+	if (request.body.password==secretpassword) 
+		{control = 'correct password'; db_data=await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});} 
+	else {control = 'incorrect password';}
+	response.json({control: control, db_data: db_data});
+});
+
+
+//history
+app.post('/printout_history10', async (request, response) => {
+	var db_data = "access denied";
+	var control = '';
+	var income = request.body.password;
+	var count = 0;
+	if (request.body.password==secretpassword) 
+		{control = 'correct password'; db_data= await new Promise( (resolve,reject) => {database.history_db.find({history: 'p10y'}, function (err, output) {resolve(output[0].periods);});});} 
+	else {control = 'incorrect password';}
+	response.json({control: control, db_data: db_data});
+});
+
+
+//***********************************************************************************************************************
+// Other functions
+
+
+//identify port
+app.post('/port_identity', (request, response) => {
+	var port_number = "access denied";
+	var control = '';
+	var income = request.body.password;
+	var count = 0;
+	if (request.body.password==secretpassword) {control = 'correct password'; port_number = port;} else {control = 'incorrect password';}
+	//if (request.body.password=="sweden") {reply = 'correct password';} else {reply = 'incorrect password';}
+	response.json({control: control, port: port_number});
+});
