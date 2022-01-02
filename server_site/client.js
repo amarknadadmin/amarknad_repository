@@ -1,8 +1,9 @@
 
 console.log('x_fetch_function()');
-console.log('"sweden"');
 console.log('y_fetch_function()');
-
+console.log('x_Heroku_fetch_function()');
+console.log('y_Heroku_fetch_function()');
+console.log('"sweden"');
 
 //A1: create variable to send
 var datasend = {password: 'thisisatestpassword'};
@@ -39,6 +40,37 @@ async function y_fetch_function(aaa) {
 	const data = await response.json();
 	console.log(data.reply);
 }
+
+
+
+
+// x code from Heroku to my local computer
+async function x_Heroku_fetch_function() {
+	const response = await fetch('https://amarknad-server-site.herokuapp.com/api_x');
+	const data = await response.json();
+	console.log(data.reply);
+}
+
+
+// y code from Heroku to my local computer
+async function y_Heroku_fetch_function(aaa) {
+	const response = await fetch('https://amarknad-server-site.herokuapp.com/api_y',{
+	method: 'POST',
+	headers: {'Content-Type': 'application/json'},
+	body: JSON.stringify({password: aaa})
+});
+	const data = await response.json();
+	console.log(data.reply);
+}
+
+
+
+
+
+
+
+
+
 
 
 
