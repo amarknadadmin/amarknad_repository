@@ -358,27 +358,15 @@ async function stats_update() {
 
 //x_server_test: server set up to receive get-requests
 app.get('/api_x', async (request, response) => {
-	latesttime_update();
+	//latesttime_update();
 
 	//var return_value = '';
 	//await database.time_db.find({}, function (err, output){return_value = output[0].time;console.log("message inside: "+return_value);});
 	//await console.log("message outside: "+return_value);
 
 	
-	response.json({reply: "x1 executed"});
+	response.json({reply: "x1 executed, api works"});
 });
-
-app.get('/api_x2', async (request, response) => {
-	//var logged_time = await new Promise( (resolve,reject) => {database.time_db.find({ }, function (err, output) {resolve(output[0].time);});});
-
-	response.json({reply: "x2 executed", result: 123});
-});
-
-app.get('/api_x3', async (request, response) => {
-	var logged_time = await new Promise( (resolve,reject) => {database.history_db.find({ }, function (err, output) {resolve(output[0].time);});});
-	response.json({reply: "x3 executed", result: logged_time});
-});
-
 
 
 //y_server_test: server set up to receive post-requests
@@ -386,9 +374,19 @@ app.post('/api_y', (request, response) => {
 	var reply = '';
 	var income = request.body.password;
 	var count = 0;
-	if (request.body.password==secretpassword) {reply = 'correct'; count =1;} else {reply = 'incorrect'; count =5;}
-	response.json({reply: reply, received: income, required: secretpassword, count: count});
+	//if (request.body.password==secretpassword) {reply = 'correct';} else {reply = 'incorrect';}
+	if (request.body.password=="sweden") {reply = 'correct password';} else {reply = 'incorrect password';}
+	response.json({reply: reply});
 });
+
+
+
+
+
+
+
+
+
 
 //supply stats to amarknad.se
 app.post('/api_supply', async (request, response) => {

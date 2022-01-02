@@ -1,7 +1,6 @@
 
 console.log('x_fetch_function()');
-console.log('x2_fetch_function()');
-console.log('x3_fetch_function()');
+console.log('alpha');
 console.log('y_fetch_function()');
 
 
@@ -18,23 +17,15 @@ const options = {
 };
 
 
+
+
+
+
 // x code
 async function x_fetch_function() {
 	const response = await fetch('/api_x');
 	const data = await response.json();
 	console.log(data.reply);
-}
-
-async function x2_fetch_function() {
-	const response = await fetch('/api_x2');
-	const data = await response.json();
-	console.log(data);
-}
-
-async function x3_fetch_function() {
-	const response = await fetch('/api_x3');
-	const data = await response.json();
-	console.log(data);
 }
 
 
@@ -43,12 +34,19 @@ async function y_fetch_function(aaa) {
 	const response = await fetch('/api_y',{
 	method: 'POST',
 	headers: {'Content-Type': 'application/json'},
-	body: JSON.stringify(aaa)
+	body: JSON.stringify({password: aaa})
 });
 	const data = await response.json();
 	console.log(data.reply);
-	console.log(data);
 }
+
+
+
+
+
+
+
+
 
 
 // 5 minutes code
