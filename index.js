@@ -7,7 +7,7 @@ import cors from 'cors';
 
 const app = express();
 
-app.use("cors");
+app.use(cors());
 
 //const Datastore = require('nedb');
 import Datastore from 'nedb';
