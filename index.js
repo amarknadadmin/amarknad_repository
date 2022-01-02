@@ -236,6 +236,8 @@ async function create_list_periods(per_num) { //this function creates a string o
 }
 
 
+//when this function is triggered the server updates the stats database based on what the latest recorded time is
+//this function does not update the recorded times
 async function stats_update() {
 	
 	
@@ -325,20 +327,19 @@ async function stats_update() {
 	for (var i = 0; i < 120; i++) {data_array[i].ungdom = scbdata.data[i].values[0];}
 	dload2_usegments_body.query[3].selection.values = ["tot15-74"];
 
-	//console.log(scbdata);
-	//console.log(data_array);
-
 	await database.stats_db.remove({}, { multi: true }, function (err, numRemoved) {});
 	database.stats_db.persistence.compactDatafile();
 	console.log(data_array[0].period);
-	//database.stats_db.insert({data_array[0]});
+	
+
+	//below loop updates stats database with periods, period names and data
 	for (var i = 0; i < 120; i++) {
-		database.stats
+		//database.stats_db
 			database.stats_db.insert({
 			
 			
 			period: data_array[i].period,
-			month: monthNumberToLabelMap[parseInt(data_array[i].period.substring(5,7))],
+			month: (monthNumberToLabelMap[parseInt(data_array[i].period.substring(5,7))])+" "+data_array[i].period.substring(2,4),
 			SYS: data_array[i].SYS,
 			ALOS: data_array[i].ALOS,
 			EIAKR: data_array[i].EIAKR,
@@ -362,6 +363,8 @@ async function stats_update() {
 
 //x_server_test: server set up to receive get-requests
 app.get('/api_x', async (request, response) => {
+	await latesttime_update();
+	await stats_update();
 	
 	response.json({reply: "x1 executed, api works", testvalue: 123});
 });
