@@ -1,6 +1,6 @@
 
 console.log('x_fetch_function()');
-console.log('alpha');
+console.log('"sweden"');
 console.log('y_fetch_function()');
 
 
