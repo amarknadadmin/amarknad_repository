@@ -365,7 +365,7 @@ app.get('/api_x', async (request, response) => {
 	//await console.log("message outside: "+return_value);
 
 	
-	response.json({reply: "x1 executed, api works"});
+	response.json({reply: "x1 executed, api works", testvalue: 123});
 });
 
 
@@ -376,7 +376,7 @@ app.post('/api_y', (request, response) => {
 	var count = 0;
 	//if (request.body.password==secretpassword) {reply = 'correct';} else {reply = 'incorrect';}
 	if (request.body.password=="sweden") {reply = 'correct password';} else {reply = 'incorrect password';}
-	response.json({reply: reply});
+	response.json({reply: reply, testvalue: 456});
 });
 
 
