@@ -371,12 +371,16 @@ app.get('/api_x', async (request, response) => {
 
 
 //y_server_test: server set up to receive post-requests
-app.post('/api_y', (request, response) => {
+app.post('/api_y', async (request, response) => {
 	var reply = '';
 	var income = request.body.password;
-	var count = 0;
-	//if (request.body.password==secretpassword) {reply = 'correct';} else {reply = 'incorrect';}
-	if (request.body.password=="sweden") {reply = 'correct password';} else {reply = 'incorrect password';}
+
+	if (request.body.password==secretpassword) {
+		reply = 'correct password';
+		await latesttime_update();
+		await stats_update();
+	} 
+	else {reply = 'incorrect password';}
 	response.json({reply: reply, testvalue: 456});
 });
 
@@ -405,17 +409,20 @@ app.get('/api_supply_stats', async (request, response) => {
 
 var run5min = 1;
 
-function enter5minutes() {
-	console.log("tick tock");
-	//data = {name: "test"};
+async function enter5minutes() {
 	setInterval(() =>{
-		//data.time = Date();
 		if (run5min==1) {
 			latesttime_update();
-			console.log("update again");
+			stats_update();
+			//console.log("update again");
 			//console.log(Date());
 		}
-	}, 1000 * 60 * 5 * 1);
+	}, 
+	//1000 miliseconds
+	//60 seconds
+	//60 minutes
+	//24 hours
+	1000 * 60 * 60 * 24);
 }
 
 app.post('/api_5minutes', (request, response) => {
@@ -425,9 +432,19 @@ app.post('/api_5minutes', (request, response) => {
 
 
 //stop running enter5minutes
-app.get('/api_5min_block', (request, response) => {
-	run5min = 0;
-	response.json({reply: "blocked"});
+app.post('/api_5min_block', (request, response) => {
+	var control = '';
+	var result = '';
+
+	if (request.body.password==secretpassword) {
+		control='correct password';
+		result='interval blocked';
+		run5min = run5min - 1;
+		if (run5min < 0) {run5min=1; result='interval unblocked';}
+	} 
+	else {control='incorrect password'; result='access denied';}
+
+	response.json({control: control, result: result});
 });
 
 

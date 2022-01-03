@@ -45,7 +45,7 @@ async function supply_stats() {
 // Automatic updates management
 
 
-// 5 minutes code
+// 5 min code
 async function min5_fetch_function(aaa) {
 	const response = await fetch('/api_5minutes',{
 	method: 'POST',
@@ -58,11 +58,16 @@ async function min5_fetch_function(aaa) {
 
 
 
-// 5min block
-async function db_5min_block() {
-	const response = await fetch('/api_5min_block');
+// 5 min block
+async function db_5min_block(aaa) {
+	const response = await fetch('/api_5min_block',{
+	method: 'POST',
+	headers: {'Content-Type': 'application/json'},
+	body: JSON.stringify({password: aaa})
+});
 	const data = await response.json();
-	console.log(data.reply);
+	console.log(data.control);
+	console.log(data.result);
 }
 
 
