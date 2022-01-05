@@ -56,6 +56,16 @@ async function min5_fetch_function(aaa) {
 	console.log(data.reply);
 }
 
+// check latest update
+async function min5_last_update(aaa) {
+	const response = await fetch('/last_update_was',{
+	method: 'POST',
+	headers: {'Content-Type': 'application/json'},
+	body: JSON.stringify({password: aaa})
+});
+	const data = await response.json();
+	console.log(data.reply);
+}
 
 
 // 5 min block

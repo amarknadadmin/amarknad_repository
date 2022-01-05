@@ -408,28 +408,37 @@ app.get('/api_supply_stats', async (request, response) => {
 // Automatic updates management
 
 var run5min = 1;
+var myInterval = '';
+var last_update_was ='';
 
 async function enter5minutes() {
-	setInterval(() =>{
-		if (run5min==1) {
-			latesttime_update();
-			stats_update();
-			//console.log("update again");
-			//console.log(Date());
-		}
+	myInterval = setInterval(() =>{
+		//latesttime_update();
+		//stats_update();
+		last_update_was = Date();
+		console.log(Date());
 	}, 
 	//1000 miliseconds
 	//60 seconds
 	//60 minutes
 	//24 hours
-	1000 * 60 * 60 * 24);
+	1000 * 60 * 60 * 3);
 }
 
 app.post('/api_5minutes', (request, response) => {
-	if (request.body.password==secretpassword) {enter5minutes();}
-	response.json({reply: "5 minutes executed"});
+	var reply = "incorrect password";
+	if (request.body.password==secretpassword) {
+		enter5minutes(); 
+		reply= 'interval started'; 
+	}
+	response.json({reply: reply});
 });
 
+app.post('/last_update_was', (request, response) => {
+	var reply = "incorrect password";
+	if (request.body.password==secretpassword) {reply=last_update_was;}
+	response.json({reply: reply});
+});
 
 //stop running enter5minutes
 app.post('/api_5min_block', (request, response) => {
@@ -439,8 +448,9 @@ app.post('/api_5min_block', (request, response) => {
 	if (request.body.password==secretpassword) {
 		control='correct password';
 		result='interval blocked';
+		clearInterval(myInterval)
 		run5min = run5min - 1;
-		if (run5min < 0) {run5min=1; result='interval unblocked';}
+		if (run5min < 0) {enter5minutes(); run5min=1; result='interval unblocked';}
 	} 
 	else {control='incorrect password'; result='access denied';}
 
